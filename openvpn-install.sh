@@ -38,6 +38,10 @@ elif [[ -e /etc/fedora-release ]]; then
 	os="fedora"
 	os_version=$(grep -oE '[0-9]+' /etc/fedora-release | head -1)
 	group_name="nobody"
+elif grep -qs "freebsd" /etc/os-release; then
+	os="freebsd"
+	os_version=$(grep 'VERSION_ID' /etc/os-release | cut -d '"' -f 2 | tr -d '.')
+	group_name="nogroup"
 else
 	echo "This installer seems to be running on an unsupported distribution.
 Supported distros are Ubuntu, Debian, AlmaLinux, Rocky Linux, CentOS and Fedora."
@@ -47,6 +51,11 @@ fi
 if [[ "$os" == "ubuntu" && "$os_version" -lt 1804 ]]; then
 	echo "Ubuntu 18.04 or higher is required to use this installer.
 This version of Ubuntu is too old and unsupported."
+	exit
+fi
+
+if [[ "$os" == "freebsd" ]]; then
+	echo "FreeBSD is detected !"
 	exit
 fi
 
@@ -233,6 +242,8 @@ LimitNPROC=infinity" > /etc/systemd/system/openvpn-server@server.service.d/disab
 	elif [[ "$os" = "centos" ]]; then
 		yum install -y epel-release
 		yum install -y openvpn openssl ca-certificates tar $firewall
+	elif [["$os" = "freebsd"]]; then
+		pkg update && pkg install openvpn unzip
 	else
 		# Else, OS must be Fedora
 		dnf install -y openvpn openssl ca-certificates tar $firewall
@@ -551,6 +562,8 @@ else
 				if [[ "$os" = "debian" || "$os" = "ubuntu" ]]; then
 					rm -rf /etc/openvpn/server
 					apt-get remove --purge -y openvpn
+				elif [["$os" = "freebsd"]]; then
+					rm -rf /etc/openvpn/server
 				else
 					# Else, OS must be CentOS or Fedora
 					yum remove -y openvpn
